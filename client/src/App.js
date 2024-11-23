@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Plus, ChevronLeft, ChevronRight, X, Trash2, Edit } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react';
-const SERVER_URL = "https://localhost:5000"
+const SERVER_URL = "http://localhost:5000"
 
 export default function App() {
   const [products, setProducts] = useState([])
