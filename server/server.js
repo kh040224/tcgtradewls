@@ -11,7 +11,7 @@ const express = require('express');
 const https = require('https');
 const WebSocket = require('ws');
 const cors = require('cors');
-const productRoutes = require('./productRoutes');
+const productRoutes = require('./routes/productRoutes');
 
 const app = express();
 const server = https.createServer(app);
