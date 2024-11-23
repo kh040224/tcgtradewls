@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Plus, ChevronLeft, ChevronRight, X, Trash2, Edit } from 'lucide-react'
-import { QRCodeSVG } from 'qrcode.react'; // Added import for QRCodeSVG
+import { QRCodeSVG } from 'qrcode.react';
 const SERVER_URL = "https://localhost:5000"
 
 export default function App() {
@@ -23,7 +23,35 @@ export default function App() {
   const formRef = useRef(null)
   const [soldItems, setSoldItems] = useState({})
   const [showSoldPopup, setShowSoldPopup] = useState(null)
-  const [showQR, setShowQR] = useState(false); // Added state for QR code visibility
+  const [showQR, setShowQR] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
+
+  useEffect(() => {
+    const ws = new WebSocket(`ws://localhost:5000`);
+
+    ws.onopen = () => {
+      console.log('WebSocket connected');
+      setWsConnected(true);
+    };
+
+    ws.onmessage = (event) => {
+      console.log('WebSocket message received:', event.data);
+      // 여기에서 수신된 메시지를 처리할 수 있습니다.
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket disconnected');
+      setWsConnected(false);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
 
   useEffect(() => {
     fetchProducts()
@@ -190,6 +218,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-orange-400 p-4 md:p-8">
+      {wsConnected ? (
+        <div className="fixed top-4 left-4 bg-green-500 text-white px-2 py-1 rounded-md">
+          WebSocket Connected
+        </div>
+      ) : (
+        <div className="fixed top-4 left-4 bg-red-500 text-white px-2 py-1 rounded-md">
+          WebSocket Disconnected
+        </div>
+      )}
       <div 
         className="fixed top-4 right-4 z-50"
         onMouseEnter={() => setShowQR(true)}
@@ -204,7 +241,7 @@ export default function App() {
         {showQR && (
           <div className="absolute top-full right-0 mt-2 bg-white p-4 rounded-lg shadow-xl">
             <QRCodeSVG 
-              value="https://forms.gle/4RzdK5St7VBWDzmh8" 
+              value="https://forms.gle/sJSAMKkfR77wCj6a6" 
               size={128}
             />
           </div>
@@ -274,7 +311,7 @@ export default function App() {
                         updatedItems[index] = e.target.value
                         setNewItems(updatedItems)
                       }}
-                      placeholder={index === 0 ? "오픈카톡 링크를 넣어주세요" : "추가 상품 정보"}
+                      placeholder={index === 0 ? "오픈카톡을 넣어주세요" : "추가 상품 정보"}
                       className="flex-1 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required={index === 0}
                     />

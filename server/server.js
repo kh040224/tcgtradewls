@@ -1,5 +1,3 @@
-const express = require('express');
-const cors = require('cors');
 const {
   getProducts,
   addProduct,
@@ -9,10 +7,34 @@ const {
   getSoldStatus
 } = require('./database');
 
+const express = require('express');
+const https = require('https');
+const WebSocket = require('ws');
+const cors = require('cors');
+const productRoutes = require('./productRoutes');
 
 const app = express();
+const server = https.createServer(app);
+const wss = new WebSocket.Server({ server });
+
 app.use(cors());
 app.use(express.json());
+
+// 제품 라우트 사용
+app.use('/api/products', productRoutes);
+
+wss.on('connection', (ws) => {
+  console.log('WebSocket client connected');
+  
+  ws.on('message', (message) => {
+    console.log('Received:', message);
+    // 여기에 메시지 처리 로직을 추가할 수 있습니다.
+  });
+
+  ws.on('close', () => {
+    console.log('WebSocket client disconnected');
+  });
+});
 
 // 상품 목록 조회
 app.get('/api/products', async (req, res) => {
