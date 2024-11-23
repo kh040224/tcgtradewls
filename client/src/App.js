@@ -2,10 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Plus, ChevronLeft, ChevronRight, X, Trash2, Edit } from 'lucide-react'
-import { QRCodeSVG } from 'qrcode.react';
-const SERVER_URL = "http://localhost:5000"
+import { QRCodeSVG } from 'qrcode.react'
 
-export default function App() {
+// 서버 URL 설정
+const SERVER_URL = "http://localhost:5000"
+const WS_URL = "ws://localhost:5000"
+
+export default function Component() {
   const [products, setProducts] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [showItemsPopup, setShowItemsPopup] = useState(null)
@@ -19,64 +22,94 @@ export default function App() {
   const [deleteError, setDeleteError] = useState('')
   const [editError, setEditError] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
-  const productsPerPage = 9
-  const formRef = useRef(null)
   const [soldItems, setSoldItems] = useState({})
   const [showSoldPopup, setShowSoldPopup] = useState(null)
-  const [showQR, setShowQR] = useState(false);
-  const [wsConnected, setWsConnected] = useState(false);
+  const [showQR, setShowQR] = useState(false)
+  const [wsConnected, setWsConnected] = useState(false)
+  const [fetchError, setFetchError] = useState(null)
+  
+  const productsPerPage = 9
+  const formRef = useRef(null)
+  const wsRef = useRef(null)
 
   useEffect(() => {
-    const ws = new WebSocket(`ws://localhost:5000`);
+    // WebSocket 연결
+    const connectWebSocket = () => {
+      try {
+        const ws = new WebSocket(WS_URL)
+        wsRef.current = ws
 
-    ws.onopen = () => {
-      console.log('WebSocket connected');
-      setWsConnected(true);
-    };
+        ws.onopen = () => {
+          console.log('WebSocket connected')
+          setWsConnected(true)
+        }
 
-    ws.onmessage = (event) => {
-      console.log('WebSocket message received:', event.data);
-      // 여기에서 수신된 메시지를 처리할 수 있습니다.
-    };
+        ws.onmessage = (event) => {
+          console.log('WebSocket message received:', event.data)
+          // 메시지 수신 시 상품 목록 새로고침
+          fetchProducts()
+        }
 
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error)
+          setWsConnected(false)
+        }
 
-    ws.onclose = () => {
-      console.log('WebSocket disconnected');
-      setWsConnected(false);
-    };
+        ws.onclose = () => {
+          console.log('WebSocket disconnected')
+          setWsConnected(false)
+          // 3초 후 재연결 시도
+          setTimeout(connectWebSocket, 3000)
+        }
+      } catch (error) {
+        console.error('WebSocket connection error:', error)
+        setWsConnected(false)
+        // 3초 후 재연결 시도
+        setTimeout(connectWebSocket, 3000)
+      }
+    }
+
+    connectWebSocket()
 
     return () => {
-      ws.close();
-    };
-  }, []);
-
-  useEffect(() => {
-    fetchProducts()
-    fetchSoldStatus()
+      if (wsRef.current) {
+        wsRef.current.close()
+      }
+    }
   }, [])
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch(SERVER_URL+'/api/products')
+      setFetchError(null)
+      const response = await fetch(`${SERVER_URL}/api/products`)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
       const data = await response.json()
       setProducts(data)
     } catch (error) {
       console.error('Failed to fetch products:', error)
+      setFetchError('상품 목록을 불러오는데 실패했습니다.')
     }
   }
 
   const fetchSoldStatus = async () => {
     try {
       const response = await fetch(`${SERVER_URL}/api/products/sold-status`)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
       const data = await response.json()
       setSoldItems(data)
     } catch (error) {
       console.error('Failed to fetch sold status:', error)
     }
   }
+
+  useEffect(() => {
+    fetchProducts()
+    fetchSoldStatus()
+  }, [])
 
   const handleAddProduct = async (e) => {
     e.preventDefault()
